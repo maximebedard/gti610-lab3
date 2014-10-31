@@ -117,7 +117,7 @@ public class UDPReceiver extends Thread {
         try{
 
             //*Creation d'un socket UDP
-            socket = new DatagramSocket(port, InetAddress.getByName("localhost"));
+            socket = new DatagramSocket(port);
 
             //*Boucle infinie de recpetion
 			while(true){
@@ -130,50 +130,19 @@ public class UDPReceiver extends Thread {
 				//*Creation d'un DataInputStream ou ByteArrayInputStream pour manipuler les bytes du paquet
                 DataInputStream stream = new DataInputStream(new ByteArrayInputStream(buffer));
 
-				//*Lecture et sauvegarde des deux premier bytes, qui specifie l'identifiant
-                short id = stream.readShort();
-                System.out.println("ID : " + id);
-
-				//* lecture du bit QR qui indique si le paquet est une requête ou ne réponse.
-				//* vous pouvez aussi vous servir du huitieme byte (ANCount), qui specifie le nombre de reponses
-				//*  dans le message (si  ANCount = 0 alors c'est une requête)
-
-                byte flags1 = stream.readByte();
-                byte flags2 = stream.readByte();
-
-                boolean qr = flags1 < 0;
-
-                short qdcount = stream.readShort();
-                short ancount = stream.readShort();
-                short nscount = stream.readShort();
-                short arcount = stream.readShort();
-
-                //*Lecture du Query Domain name, a partir du 13 byte
-                String qname = "";
-                byte cb;
-                while((cb = stream.readByte()) != 0x00)
-                    qname += (char)cb;
-
-                qname = qname.trim().replace('\u0003', '.');
-                System.out.println("Qname : " + qname);
-
-                short qtype = stream.readShort();
-                short qclass = stream.readShort();
+                // Creation du paquet
+                DnsMessage message = new DnsMessage(stream);
 
                 //******  Dans le cas d'un paquet requête *****
-                if (!qr) {
+                if (message.isRequest()) {
 
+                    DnsMessage.Question question = message.getQuestions().get(0);
+
+                    System.out.println(String.format("Request(%d) -> %s", message.getTransactionId(), question.getName()));
 
                     //*Sauvegarde du Query Domain name
 
                     //*Sauvegarde de l'adresse, du port et de l'identifiant de la requete
-
-                    String name = "";
-                    while ((cb = stream.readByte()) != 0x00)
-                        name += (char)cb;
-
-                    name = name.trim().replace('\u0003', '.');
-                    System.out.println("Name : " + name);
 
                     //*Si le mode est redirection seulement
 
@@ -189,56 +158,64 @@ public class UDPReceiver extends Thread {
 
                         HashMap<String, String> dnsEntries = getDnsEntries();
 
-                        System.out.println(String.format("Recherche de l'hôte %s dans la cache local", qname));
+                        if(dnsEntries.containsKey(question.getName())) {
 
-                        if(dnsEntries.containsKey(qname)) {
+                            System.out.println(String.format("  cache -> %s = %s",
+                                    question.getName(),
+                                    dnsEntries.get(question.getName())));
 
                             //*Creer le paquet de reponse a l'aide du UDPAnswerPaquetCreator
-                            UDPAnswerPacketCreator creator = new UDPAnswerPacketCreator();
-                            byte[] newPacket = creator.CreateAnswerPacket(buffer, dnsEntries.get(qname));
+                            //UDPAnswerPacketCreator creator = new UDPAnswerPacketCreator();
+                            //byte[] newPacket = creator.CreateAnswerPacket(buffer, dnsEntries.get(question.getQname()));
 
                             //*Placer ce paquet dans le socket
-                            socket.send(new DatagramPacket(newPacket, newPacket.length));
+                            //System.out.println(String.format("  transfert to -> localhost"));
+                            //UDPSender sender = new UDPSender(new DatagramPacket(newPacket, newPacket.length), "127.0.0.1", port);
+                            //sender.setSocket(socket);
+                            //sender.SendPacketNow();
 
                             //*Envoyer le paquet
-
+                            sendAnswerPacket();
                         }
                         else {
                             //*Rediriger le paquet vers le serveur DNS
                             redirectPacket(socket, buffer);
                         }
-
                     }
-
                 }
                 //******  Dans le cas d'un paquet reponse *****
-
                 else {
-                    System.out.println("REPONSE");
-                    //*Lecture du Query Domain name, a partir du 13 byte
-
-					//*Sauvegarde du Query Domain name
-					
-					//*Passe par dessus Query Type et Query Class
-
-                    stream.skipBytes(18);
 
 
-                    String ip = String.format("%d.%d.%d.%d",
-                            stream.readByte(),
-                            stream.readByte(),
-                            stream.readByte(),
-                            stream.readByte());
+                    DnsMessage.Question question = message.getQuestions().get(0);
 
-                    System.out.println("IP: " + ip);
+                    System.out.println(String.format("Response(%d) -> %s",
+                            message.getTransactionId(), question.getName()));
 
 
-				    //*Passe par dessus les premiers champs du ressource record pour arriver au ressource data
-			        //*qui contient l'adresse IP associe au hostname (dans le fond saut de 16 bytes)
-					
-					//*Capture de ou des  adresse(s) IP (ANCOUNT est le nombre de réponses retournées)
-					
-					//*Ajouter la ou les correspondance(s) dans le fichier DNS si elles ne y sont pas déjà
+                    for(DnsMessage.Answer answer : message.getAnswers()){
+                        System.out.println(answer.getAddress());
+
+
+                    }
+                    //*Capture de ou des  adresse(s) IP (ANCOUNT est le nombre de réponses retournées)
+                    //System.out.println("ANSWER COUNT : " + header.getAncount());
+                    /*if(header.getAncount() > 0){
+
+                        DnsAnswer answer = new DnsAnswer(stream);
+                        addDnsEntry(answer.getIpAddress(), question.getQname());
+
+
+                        HashMap<String, String> dnsEntries = getDnsEntries();
+
+                        if(!dnsEntries.containsKey(question.getQname())){
+                            addDnsEntry(answer.getIpAddress(), question.getQname());
+                        }
+
+
+                    } */
+
+                    //*Ajouter la ou les correspondance(s) dans le fichier DNS si elles ne y sont pas déjà
 					
 					//*Faire parvenir le paquet reponse au demandeur original, ayant emis une requete 
 					//*avec cet identifiant
@@ -256,7 +233,7 @@ public class UDPReceiver extends Thread {
         }
     }
 
-    private HashMap<String, String> getDnsEntries() {
+    private HashMap<String, String> getDnsEntries() throws IOException {
         HashMap<String, String> dnsEntries = new HashMap<String, String>();
         BufferedReader reader = null;
         try {
@@ -270,33 +247,48 @@ public class UDPReceiver extends Thread {
                 }
             }
         }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
         finally {
-            try {
-                if (reader != null) {
-                    reader.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (reader != null) {
+                reader.close();
             }
         }
         return dnsEntries;
     }
 
+    private void sendAnswerPacket(){
+
+    }
+
 
     private void redirectPacket(DatagramSocket socket, byte[] packet) throws IOException {
-        System.out.println(String.format("Transfert de la requête vers : %s", SERVER_DNS));
-        UDPSender sender = new UDPSender(new DatagramPacket(packet, packet.length), SERVER_DNS, port);
+        redirectPacket(socket, packet, SERVER_DNS);
+    }
+
+    private void redirectPacket(DatagramSocket socket, byte[] packet, String address) throws IOException {
+        System.out.println(String.format("  transfert to -> %s", address));
+        UDPSender sender = new UDPSender(new DatagramPacket(packet, packet.length), address, port);
         sender.setSocket(socket);
         sender.SendPacketNow();
     }
 
 
+    private void addDnsEntry(String ip, String hostname) throws IOException {
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(DNSFile, true));
+            writer.write(String.format("%s %s\n", ip, hostname));
+                    }
+        finally {
+            if (writer != null) {
+                writer.close();
+            }
+        }
+    }
 
 
 
 
 }
+
+
 
