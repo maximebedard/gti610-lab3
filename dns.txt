@@ -1,2 +1,18 @@
-127.0.0.1 reddit.com
-
+reddit.com 127.0.0.1
+github.com 192.30.252.128
+google.ca 24.200.237.20
+google.ca 24.200.237.30
+google.ca 24.200.237.45
+google.ca 24.200.237.50
+google.ca 24.200.237.59
+google.ca 24.200.237.40
+google.ca 24.200.237.25
+google.ca 24.200.237.35
+google.ca 24.200.237.49
+google.ca 24.200.237.44
+google.ca 24.200.237.34
+google.ca 24.200.237.29
+google.ca 24.200.237.54
+google.ca 24.200.237.55
+google.ca 24.200.237.39
+google.ca 24.200.237.24

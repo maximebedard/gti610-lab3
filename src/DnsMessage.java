@@ -63,11 +63,22 @@ public class DnsMessage {
     private String parseVariableString(DataInputStream stream) throws IOException {
         String temp = "";
         byte cb;
-        while((cb = stream.readByte()) != 0x00)
-            temp += (char)cb;
 
-        return temp.trim().replace('\u0003', '.');
+
+        while((cb = stream.readByte()) != 0x00){
+            byte length = cb;
+            for(byte i = 0; i < length; i++){
+                cb = stream.readByte();
+                temp += (char)cb;
+            }
+            temp += ".";
+        }
+
+
+        return temp.substring(0,temp.length()-1);
     }
+
+
 
     public short getTransactionId() {
         return transactionId;
@@ -104,57 +115,42 @@ public class DnsMessage {
     }
 
     class Answer {
+        private final int[] rdData;
 
-        //private final byte[] rdData;
 
-        String getName() {
-            return name;
-        }
-
-        short getType() {
-            return type;
-        }
-
-        short getKlass() {
-            return klass;
-        }
-
-        int getTtl() {
-            return ttl;
-        }
-
-        short getRdLength() {
-            return rdLength;
-        }
-
-        private final String name;
-        private final short type;
-        private final short klass;
+        private final int name;
+        private final int type;
+        private final int klass;
         private final int ttl;
-        private final short rdLength;
+        private final int rdLength;
 
         public Answer(DataInputStream stream) throws IOException {
-            name = parseVariableString(stream);
-            type = stream.readShort();
-            klass = stream.readShort();
+            name = stream.readUnsignedShort();
+            type = stream.readUnsignedShort();
+            klass = stream.readUnsignedShort();
             ttl = stream.readInt();
-            rdLength = stream.readShort();
+            rdLength = stream.readUnsignedShort();
 
-            /*rdData = new byte[rdLength];
+            rdData = new int[rdLength];
             for(int i = 0; i < rdLength; i++) {
-                rdData[i] = stream.readByte();
-            } */
-
+                rdData[i] = stream.readUnsignedByte();
+            }
         }
 
         public String getAddress(){
-            //assert(rdData.length == 8);
-            return "";
+            assert(rdData.length == 4);
+            return String.format("%d.%d.%d.%d", rdData[0], rdData[1], rdData[2], rdData[3]);
         }
 
 
     }
 
+
+    private void toHex(byte b){
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("%02X ", b));
+        System.out.print(sb.toString() + " ");
+    }
 
 
 }

@@ -140,21 +140,11 @@ public class UDPReceiver extends Thread {
 
                     System.out.println(String.format("Request(%d) -> %s", message.getTransactionId(), question.getName()));
 
-                    //*Sauvegarde du Query Domain name
-
-                    //*Sauvegarde de l'adresse, du port et de l'identifiant de la requete
-
-                    //*Si le mode est redirection seulement
-
-                    //*Rediriger le paquet vers le serveur DNS
                     if(RedirectionSeulement){
+                        //*Rediriger le paquet vers le serveur DNS
                         redirectPacket(socket, buffer);
                     }
                     else {
-                        //*Sinon
-
-                        //*Rechercher l'adresse IP associe au Query Domain name dans le fichier de
-                        //*correspondance de ce serveur
 
                         HashMap<String, String> dnsEntries = getDnsEntries();
 
@@ -192,34 +182,25 @@ public class UDPReceiver extends Thread {
                     System.out.println(String.format("Response(%d) -> %s",
                             message.getTransactionId(), question.getName()));
 
+                    HashMap<String, String> dnsEntries = getDnsEntries();
 
                     for(DnsMessage.Answer answer : message.getAnswers()){
-                        System.out.println(answer.getAddress());
+                        System.out.println("  -> " + answer.getAddress());
 
-
-                    }
-                    //*Capture de ou des  adresse(s) IP (ANCOUNT est le nombre de réponses retournées)
-                    //System.out.println("ANSWER COUNT : " + header.getAncount());
-                    /*if(header.getAncount() > 0){
-
-                        DnsAnswer answer = new DnsAnswer(stream);
-                        addDnsEntry(answer.getIpAddress(), question.getQname());
-
-
-                        HashMap<String, String> dnsEntries = getDnsEntries();
-
-                        if(!dnsEntries.containsKey(question.getQname())){
-                            addDnsEntry(answer.getIpAddress(), question.getQname());
+                        if(!dnsEntries.containsKey(question.getName()))
+                        {
+                            addDnsEntry(question.getName(), answer.getAddress());
                         }
+                    }
 
 
-                    } */
 
                     //*Ajouter la ou les correspondance(s) dans le fichier DNS si elles ne y sont pas déjà
 					
 					//*Faire parvenir le paquet reponse au demandeur original, ayant emis une requete 
 					//*avec cet identifiant
                 }
+                System.out.print("\n");
 			}
 		}
         catch(Exception e){
@@ -243,7 +224,7 @@ public class UDPReceiver extends Thread {
             while((line = reader.readLine()) != null) {
                 String[] exploded = line.split(" ");
                 if(exploded.length > 1) {
-                    dnsEntries.put(exploded[1], exploded[0]);
+                    dnsEntries.put(exploded[0], exploded[1]);
                 }
             }
         }
