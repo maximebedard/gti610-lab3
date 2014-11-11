@@ -12,12 +12,12 @@ import java.util.ArrayList;
 public class DnsMessage {
 
 
-    private final short flags;
-    private final short transactionId;
-    private final short questionsCount;
-    private final short answersCount;
-    private final short authoritiesCount;
-    private final short additionalCount;
+    private final int flags;
+    private final int transactionId;
+    private final int questionsCount;
+    private final int answersCount;
+    private final int authoritiesCount;
+    private final int additionalCount;
     private final ArrayList<Question> questions;
     private final ArrayList<Answer> answers;
 
@@ -30,13 +30,13 @@ public class DnsMessage {
     }
 
     public DnsMessage(DataInputStream stream) throws IOException {
-        transactionId = stream.readShort();
-        flags = stream.readShort();
+        transactionId = stream.readUnsignedShort();
+        flags = stream.readUnsignedShort();
 
-        questionsCount = stream.readShort();
-        answersCount = stream.readShort();
-        authoritiesCount = stream.readShort();
-        additionalCount = stream.readShort();
+        questionsCount = stream.readUnsignedShort();
+        answersCount = stream.readUnsignedShort();
+        authoritiesCount = stream.readUnsignedShort();
+        additionalCount = stream.readUnsignedShort();
 
         questions = new ArrayList<Question>();
         answers = new ArrayList<Answer>();
@@ -80,7 +80,7 @@ public class DnsMessage {
 
 
 
-    public short getTransactionId() {
+    public int getTransactionId() {
         return transactionId;
     }
 
@@ -92,23 +92,23 @@ public class DnsMessage {
             return name;
         }
 
-        short getType() {
+        int getType() {
             return type;
         }
 
-        short getKlass() {
+        int getKlass() {
             return klass;
         }
 
         private final String name;
-        private final short type;
-        private final short klass;
+        private final int type;
+        private final int klass;
 
         public Question(DataInputStream stream) throws IOException {
 
             name = parseVariableString(stream);
-            type = stream.readShort();
-            klass = stream.readShort();
+            type = stream.readUnsignedShort();
+            klass = stream.readUnsignedShort();
 
         }
 

@@ -26,9 +26,9 @@ public class ServeurDNS {
 			System.exit(1);
 		}
 		
-		UDPReceiver UDPR = new UDPReceiver();
+		UDPReceiver udpReceiver = new UDPReceiver();
 		File f = null;	
-		UDPR.setport(53);
+		udpReceiver.setPort(8888);
 		
 		/* cas où l'argument = default
 		 Le serveur DNS de redirection est celui de l'école "10.162.8.51"
@@ -38,23 +38,23 @@ public class ServeurDNS {
 		*/
 		if(args[0].equals("default")){
 			if (args.length <= 1) {
-				UDPR.setSERVER_DNS("10.162.8.51");
+				udpReceiver.setDNSServerAddress("8.8.8.8");
 				f = new File("DNSFILE.TXT");
 				if(f.exists()){
-					UDPR.setDNSFile("DNSFILE.TXT");
+					udpReceiver.setDnsFile("DNSFILE.TXT");
 				}
 				else{
 					try {
 						f.createNewFile();
-						UDPR.setDNSFile("DNSFILE.TXT");
+						udpReceiver.setDnsFile("DNSFILE.TXT");
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 				}
-				UDPR.setRedirectionSeulement(false);
+				udpReceiver.setRedirectionSeulement(false);
 				
 				// et on lance le thread
-				UDPR.start();
+				udpReceiver.start();
 			}
 			else{
 				System.out.print("L'éxécution par défaut n'a pas d'autres arguments");
@@ -65,12 +65,12 @@ public class ServeurDNS {
 				if (args.length == 2) {
 					f = new File(args[1]);
 					if(f.exists()){
-						UDPR.setDNSFile(args[1]);
+						udpReceiver.setDnsFile(args[1]);
 					}
 					else{
 						try {
 							f.createNewFile();
-							UDPR.setDNSFile(args[1]);
+							udpReceiver.setDnsFile(args[1]);
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
@@ -84,27 +84,23 @@ public class ServeurDNS {
 			}
 			else{
 				if (args.length == 3) { // cas où les arguments sont: [IPserveurDNS] [cacheDNS] [redirectionOuNon]
-					UDPR.setSERVER_DNS(args[0]);
+					udpReceiver.setDNSServerAddress(args[0]);
 					f = new File(args[1]);
 					if(f.exists()){
-						UDPR.setDNSFile(args[1]);
+						udpReceiver.setDnsFile(args[1]);
 					}	
 					else{
 						try {
 							f.createNewFile();
-							UDPR.setDNSFile(args[1]);
+							udpReceiver.setDnsFile(args[1]);
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
 					}
-					if(args[2].equals("false")){
-						UDPR.setRedirectionSeulement(false);
-					}
-					else{
-						UDPR.setRedirectionSeulement(true);
-					}
+					udpReceiver.setRedirectionSeulement(Boolean.parseBoolean(args[2]));
+
 					// et on lance le thread
-					UDPR.start();
+					udpReceiver.start();
 				}
 				else
 					System.out.println("Un argument est manquant!");
