@@ -1,11 +1,9 @@
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 /**
- * Cette classe permet la r�ception d'un paquet UDP sur le port de r�ception
+ * Cette classe permet la r�ception d'un paquet UDP sur le receivingPort de r�ception
  * UDP/DNS. Elle analyse le paquet et extrait le hostname
  * 
  * Il s'agit d'un Thread qui �coute en permanance 
@@ -51,16 +49,17 @@ public class UDPReceiver extends Thread {
 
     protected final static int BUF_SIZE = 1024;
 	protected String dnsServer = null;
-	protected int port = 53;  // port de réception
-	private String domainName = "none";
-	private String dnsFile = null;
+	protected int receivingPort = 53;  // receivingPort de réception
+    protected int sendingPort = 53;
+    private String dnsFile = null;
     private boolean RedirectionSeulement = false;
     private DatagramSocket socket;
     private DnsCache cache;
-    private InetAddress senderAddr;
+    private SocketAddress senderAddr;
 
-    public void setPort(int p) {
-		this.port = p;
+
+    public void setReceivingPort(int p) {
+		this.receivingPort = p;
 	}
 	
 	public void setRedirectionSeulement(boolean b){
@@ -73,7 +72,7 @@ public class UDPReceiver extends Thread {
 	
 	public void UDPReceiver(String dnsServer,int port) {
 		this.dnsServer = dnsServer;
-		this.port = port;
+		this.receivingPort = port;
 	}
 
 	public void setDnsFile(String filename){
@@ -87,18 +86,18 @@ public class UDPReceiver extends Thread {
             // On ouvre la cache
             cache = new DnsCache(dnsFile);
             // Creation d'un socket UDP
-            socket = new DatagramSocket(port);
+            socket = new DatagramSocket(receivingPort);
 
             // Boucle infinie de recpetion
 			while(true){
 				
 				//*Reception d'un paquet UDP via le socket
                 byte[] buffer = new byte[BUF_SIZE];
+
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                senderAddr = packet.getAddress();
-                //senderAddr = packet.getSocketAddress();
                 socket.receive(packet);
-                //System.out.print(buffer);
+
+                senderAddr = packet.getSocketAddress();
 
 				//*Creation d'un DataInputStream ou ByteArrayInputStream pour manipuler les bytes du paquet
                 DataInputStream stream = new DataInputStream(new ByteArrayInputStream(buffer));
@@ -141,52 +140,45 @@ public class UDPReceiver extends Thread {
             return;
         }
 
-        System.out.println(String.format(" -> %d answer(s)", answers.size()));
+        System.out.println(String.format("  -> %d answer(s)", answers.size()));
         for(DnsMessage.Answer answer : answers) {
             System.out.println("    -> " + answer.getAddress());
             cache.put(question.getName(), answer.getAddress());
+            System.out.println("      -> cached");
         }
-        System.out.println("    -> saving cache");
+        System.out.println("  -> saving cache");
         cache.save();
+
+        respondAnswers(buffer, cache.get(question.getName()));
     }
 
     private void parseRequest(byte[] buffer, DnsMessage.Question question) {
 
         if(RedirectionSeulement) {
-            System.out.print(" redirect -> " + dnsServer);
-            UDPSender.send(socket, buffer, dnsServer, port);
+            System.out.println("  redirect only -> " + dnsServer);
+            UDPSender.send(socket, buffer, dnsServer, sendingPort);
             return;
         }
 
         if(!cache.containsKey(question.getName())) {
-            System.out.print(" not in cache, redirect -> " + dnsServer);
-            UDPSender.send(socket, buffer, dnsServer, port);
+            System.out.println("  not in cache, redirect -> " + dnsServer);
+            UDPSender.send(socket, buffer, dnsServer, sendingPort);
             return;
         }
 
-        List<String> addresses = cache.get(question.getName());
+        respondAnswers(buffer, cache.get(question.getName()));
+    }
+
+    private void respondAnswers(byte[] buffer, List<String> addresses){
 
         for(String addr:addresses){
-            System.out.println(String.format("  cache -> %s = %s", question.getName(), addr));
+            System.out.println(String.format("  respond -> %s", addr));
 
             UDPAnswerPacketCreator creator = new UDPAnswerPacketCreator();
             byte[] newPacket = creator.CreateAnswerPacket(buffer, addr);
-
-            //UDPSender.send(socket, newPacket, );
+            // TODO add multiple answers
+            UDPSender.send(socket, newPacket, senderAddr);
         }
-
-        //*Creer le paquet de reponse a l'aide du UDPAnswerPaquetCreator
-
-
-
-
-        //*Placer ce paquet dans le socket
-        //System.out.println(String.format("  transfert to -> localhost"));
-        //UDPSender sender = new UDPSender(new DatagramPacket(newPacket, newPacket.length), "127.0.0.1", port);
-        //sender.setSocket(socket);
-        //sender.SendPacketNow();
-
-        //*Envoyer le paquet
 
     }
 

@@ -12,7 +12,7 @@ import java.util.ArrayList;
 public class DnsMessage {
 
 
-    private final int flags;
+    private final short flags;
     private final int transactionId;
     private final int questionsCount;
     private final int answersCount;
@@ -31,7 +31,7 @@ public class DnsMessage {
 
     public DnsMessage(DataInputStream stream) throws IOException {
         transactionId = stream.readUnsignedShort();
-        flags = stream.readUnsignedShort();
+        flags = stream.readShort();
 
         questionsCount = stream.readUnsignedShort();
         answersCount = stream.readUnsignedShort();

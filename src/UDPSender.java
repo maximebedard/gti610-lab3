@@ -27,4 +27,14 @@ public class UDPSender  {
 	}
 
 
+	public static void send(DatagramSocket socket, byte[] bytes, SocketAddress senderAddr) {
+		try {
+			DatagramPacket packet = new DatagramPacket(bytes, bytes.length);
+			packet.setSocketAddress(senderAddr);
+			socket.send(packet);
+		}
+		catch (IOException e){
+			e.printStackTrace(System.err);
+		}
+	}
 }
