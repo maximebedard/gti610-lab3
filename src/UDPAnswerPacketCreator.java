@@ -31,7 +31,7 @@ public class UDPAnswerPacketCreator {
 
 		// ANSCOUNT
 		packet[6] = (byte) 0x00;
-		packet[7] = (byte) 0x01;
+		packet[7] = (byte) 0x00;
 
 		// NSCOUNT
 		packet[8] = (byte) 0x00;
@@ -61,8 +61,6 @@ public class UDPAnswerPacketCreator {
 			index++;
 		}
 		index = index - 1;
-
-
 		// QTYPE
 		packet[index + 1] = (byte) (0x00);
 		packet[index + 2] = (byte) (0x01);
@@ -71,7 +69,7 @@ public class UDPAnswerPacketCreator {
 		packet[index + 3] = (byte) (0x00);
 		packet[index + 4] = (byte) (0x01);
 
-		return index + 4;
+		return index + 5;
 	}
 
 	private void createAnswer(String address, int offset){
@@ -120,12 +118,21 @@ public class UDPAnswerPacketCreator {
 
 		int offset = createQuestion();
 
-		//for(String addr:addresses){
-			createAnswer(addresses.get(0), offset);
-		//	offset += 16;
-		//}
+        System.out.println(" OFFSET : " + offset);
 
-		return Arrays.copyOf(packet, offset);
+		for(String addr:addresses){
+			createAnswer(addr, offset);
+			offset += 17;
+		}
 
-	}
+        byte[] bytes = Arrays.copyOf(packet, offset);
+
+        for(byte b:bytes) {
+            System.out.print((char)b + "_");
+        }
+        System.out.print('\n');
+
+        return bytes;
+
+    }
 }
