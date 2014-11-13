@@ -1,152 +1,131 @@
+import java.util.Arrays;
+import java.util.List;
 
 public class UDPAnswerPacketCreator {
-	
-	int longueur;
-	byte[] Answerpacket;
-	
-	public int getLongueur(){
-		return longueur;
-	}
-	
-	public byte[] getAnswrpacket(){
-		return Answerpacket;
-	}
-	
-	public UDPAnswerPacketCreator(){
-		
-	}
-	
-	public byte[] CreateAnswerPacket(byte[] Qpacket,String adrr){
-		
-		
-		//System.out.println("Le packet QUERY recu");
-		
-		for(int i = 0;i < Qpacket.length;i++){
-			if(i%16 == 0){
-				//System.out.println("\r");
-			}
-			//System.out.print(Integer.toHexString(Qpacket[i] & 0xff).toString() + " ");
-		}
-		//System.out.println("\r");
-		
-		//copie les informations dans un tableau qui est utilisé de buffer
-		//durant la modification du packet
-		byte[] Querypacket = new byte[1024];
-		for(int i = 0; i < Qpacket.length; i++){
-			Querypacket[i] = Qpacket[i];
-		}
-		
-		
-		//Conversion de l'adresse IP de String à byte
-		adrr = adrr.replace("."," ");
-		String[] adr = adrr.split(" ");
-		byte part1 = 0;
-		byte part2 = 0;
-		byte part3 = 0;
-		byte part4 = 0;
-		part1 = (byte)(Integer.parseInt(adr[0]) & 0xff);
-		part2 = (byte)(Integer.parseInt(adr[1]) & 0xff);
-		part3 = (byte)(Integer.parseInt(adr[2]) & 0xff);
-		part4 = (byte)(Integer.parseInt(adr[3]) & 0xff);
-		
-		//modification de l'identifiant
-		Querypacket[0] = (byte)Qpacket[0];
-		Querypacket[1] = (byte)Qpacket[1];
-		
-		//modification des paramètres
-		//Active le champ reponse dans l'en-tête
-		Querypacket[2] = (byte) 0x81;
-		Querypacket[3] = (byte) 0x80;
-		Querypacket[4] = (byte) 0x00;
-		Querypacket[5] = (byte) 0x01;
-		Querypacket[6] = (byte) 0x00;
-		Querypacket[7] = (byte) 0x01;
-		Querypacket[8] = (byte) 0x00;
-		
-		//Serveur authority --> 0 il n'y a pas de serveur d'autorité
-		Querypacket[9] = (byte) 0x00;
-		
-		Querypacket[10] = (byte) 0x00;
-		Querypacket[11] = (byte) 0x00;
 
-		//Lecture de l'hostname
-		//ici comme on ne connait pas la grandeur que occupe le nom de domaine
-		//nous devons rechercher l'index pour pouvoir placer l'adresse IP à la bonne endroit
-		//dans le packet
-		
-		int nbchar = Querypacket[12];
+	private byte[] buffer;
+	private final List<String> addresses;
+	private byte[] packet;
+
+	public UDPAnswerPacketCreator(byte[] buffer, List<String> addresses){
+		this.buffer = buffer;
+		this.addresses = addresses;
+		this.packet = Arrays.copyOf(buffer, 1024);
+	}
+
+	private void createHeader(){
+
+		short answerCount = (short) addresses.size();
+
+		// ID
+		packet[0] = (byte)buffer[0];
+		packet[1] = (byte)buffer[1];
+
+		// flags
+		packet[2] = (byte) 0x81;
+		packet[3] = (byte) 0x80;
+
+		// QCOUNT
+		packet[4] = (byte) 0x00;
+		packet[5] = (byte) 0x01;
+
+		// ANSCOUNT
+		packet[6] = (byte) 0x00;
+		packet[7] = (byte) 0x01;
+
+		// NSCOUNT
+		packet[8] = (byte) 0x00;
+		packet[9] = (byte) 0x00;
+
+		// ARCOUNT
+		packet[10] = (byte) 0x00;
+		packet[11] = (byte) 0x00;
+
+	}
+
+	private int createQuestion(){
+
+		int nbchar = packet[12];
 		String hostName = "";
 		int index = 13;
-		
-		while(nbchar != 0){
-			
-			while(nbchar > 0) {
-				hostName = hostName + String.valueOf(Character.toChars(Querypacket[index]));
-			index++;
-			nbchar--;
+
+		while(nbchar != 0) {
+
+			while (nbchar > 0) {
+				hostName += String.valueOf(Character.toChars(packet[index]));
+				index++;
+				nbchar--;
 			}
 			hostName = hostName + ".";
-			
-			nbchar = Querypacket[index];
+			nbchar = packet[index];
 			index++;
 		}
-		//System.out.println(hostName);       
 		index = index - 1;
-    
 
-		//Identification de la class
-		Querypacket[index + 1] = (byte)0x00;
-		Querypacket[index + 2] = (byte)0x01;
-		Querypacket[index + 3] = (byte)0x00;
-		Querypacket[index + 4] = (byte)0x01;
-		
-		Querypacket[index + 5] = (byte) (0xC0);
-		Querypacket[index + 6] = (byte) (0x0C);
-		Querypacket[index + 7] = (byte) (0x00);
-		Querypacket[index + 8] = (byte) 0x01;
-		Querypacket[index + 9] = (byte) 0x00;
-		Querypacket[index + 10] = (byte) 0x01;
-		Querypacket[index + 11] = (byte) 0x00;
-		Querypacket[index + 12] = (byte) 0x01;
-		
-		//time to life
-		Querypacket[index + 13] = (byte)0x1a;
-		Querypacket[index + 14] = (byte) (0x6c);
-		Querypacket[index + 15] = (byte) (0x00);
-		
-		//Grace a l'index de possion, nous somme en mesure
+
+		// QTYPE
+		packet[index + 1] = (byte) (0x00);
+		packet[index + 2] = (byte) (0x01);
+
+		// QCLASS
+		packet[index + 3] = (byte) (0x00);
+		packet[index + 4] = (byte) (0x01);
+
+		return index + 4;
+	}
+
+	private void createAnswer(String address, int offset){
+
+		String[] exploded = address.replace(".", " ").split(" ");
+
+		byte part1 = (byte)(Integer.parseInt(exploded[0]) & 0xff);
+		byte part2 = (byte)(Integer.parseInt(exploded[1]) & 0xff);
+		byte part3 = (byte)(Integer.parseInt(exploded[2]) & 0xff);
+		byte part4 = (byte)(Integer.parseInt(exploded[3]) & 0xff);
+
+		packet[offset + 1] = (byte) (0xC0);
+		packet[offset + 2] = (byte) (0x0C);
+
+		// TYPE
+		packet[offset + 3] = (byte) (0x00);
+		packet[offset + 4] = (byte) (0x01);
+
+		// CLASS
+		packet[offset + 5] = (byte) (0x00);
+		packet[offset + 6] = (byte) (0x01);
+
+		// TTL
+		packet[offset + 7] = (byte) (0x00);
+		packet[offset + 8] = (byte) (0x01);
+		packet[offset + 9] = (byte) (0x1a);
+		packet[offset + 10] = (byte) (0x6c);
+
+		packet[offset + 11] = (byte) (0x00);
+		packet[offset + 12] = (byte) (0x04);
+		//Grace a l'offset de position, nous somme en mesure
 		//de faire l'injection de l'adresse IP dans le packet
-		//et ce à la bonne endroit
-		Querypacket[index + 16] = 0x04;
-		Querypacket[index + 17] = (byte) (part1 & 0xff);
-		Querypacket[index + 18] = (byte) (part2 & 0xff);
-		Querypacket[index + 19] = (byte) (part3 & 0xff);
-		Querypacket[index + 20] = (byte) (part4 & 0xff);
-		
-		longueur = index + 20 + 1;
-		
-		Answerpacket = new byte[this.longueur];
-		
-		for(int i = 0; i < Answerpacket.length; i++){
-			Answerpacket[i] = Querypacket[i];
-		}
-		//System.out.println("Identifiant: 0x" + Integer.toHexString(Answerpacket[0] & 0xff) + Integer.toHexString(Answerpacket[1] & 0xff));
-		//System.out.println("parametre: 0x" + Integer.toHexString(Answerpacket[2] & 0xff) + Integer.toHexString(Answerpacket[3] & 0xff));
-		//System.out.println("question: 0x" + Integer.toHexString(Answerpacket[4] & 0xff) + Integer.toHexString(Answerpacket[5] & 0xff));
-		//System.out.println("reponse: 0x" + Integer.toHexString(Answerpacket[6] & 0xff) + Integer.toHexString(Answerpacket[7] & 0xff));
-		//System.out.println("autorite: 0x" + Integer.toHexString(Answerpacket[8] & 0xff) + Integer.toHexString(Answerpacket[9] & 0xff));
-		//System.out.println("info complementaire: 0x" + Integer.toHexString(Answerpacket[10] & 0xff) + Integer.toHexString(Answerpacket[11] & 0xff));
-		
-		/*
-		for(int i = 0;i < Answerpacket.length;i++){
-			if(i%16 == 0){
-				System.out.println("\r");
-			}
-			System.out.print(Integer.toHexString(Answerpacket[i] & 0xff).toString() + " ");
-		}
-		System.out.println("\r");
-		
-		*/
-		return Answerpacket;
+		//et ce au endroit
+
+		packet[offset + 13] = (byte) (part1 & 0xff);
+		packet[offset + 14] = (byte) (part2 & 0xff);
+		packet[offset + 15] = (byte) (part3 & 0xff);
+		packet[offset + 16] = (byte) (part4 & 0xff);
+
+	}
+
+	public byte[] createPacket(){
+
+
+		createHeader();
+
+		int offset = createQuestion();
+
+		//for(String addr:addresses){
+			createAnswer(addresses.get(0), offset);
+		//	offset += 16;
+		//}
+
+		return Arrays.copyOf(packet, offset);
+
 	}
 }

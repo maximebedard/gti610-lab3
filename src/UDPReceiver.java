@@ -50,7 +50,7 @@ public class UDPReceiver extends Thread {
     protected final static int BUF_SIZE = 1024;
 	protected String dnsServer = null;
 	protected int receivingPort = 53;  // receivingPort de réception
-    protected int sendingPort = 53;
+    protected int transfertPort = 53;
     private String dnsFile = null;
     private boolean RedirectionSeulement = false;
     private DatagramSocket socket;
@@ -156,13 +156,13 @@ public class UDPReceiver extends Thread {
 
         if(RedirectionSeulement) {
             System.out.println("  redirect only -> " + dnsServer);
-            UDPSender.send(socket, buffer, dnsServer, sendingPort);
+            UDPSender.send(socket, buffer, dnsServer, transfertPort);
             return;
         }
 
         if(!cache.containsKey(question.getName())) {
             System.out.println("  not in cache, redirect -> " + dnsServer);
-            UDPSender.send(socket, buffer, dnsServer, sendingPort);
+            UDPSender.send(socket, buffer, dnsServer, transfertPort);
             return;
         }
 
@@ -174,8 +174,9 @@ public class UDPReceiver extends Thread {
         for(String addr:addresses){
             System.out.println(String.format("  respond -> %s", addr));
 
-            UDPAnswerPacketCreator creator = new UDPAnswerPacketCreator();
-            byte[] newPacket = creator.CreateAnswerPacket(buffer, addr);
+
+            byte[] newPacket = new UDPAnswerPacketCreator(buffer, addresses).createPacket();
+            //byte[] newPacket = UDPAnswerPacketCreator.CreateAnswerPacket(buffer, addr);
             // TODO add multiple answers
             UDPSender.send(socket, newPacket, senderAddr);
         }
